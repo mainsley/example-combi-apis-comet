@@ -1,4 +1,4 @@
 example-combi-apis-comet
 ========================
 
-Combining extractors with connectors to get you the data you need
+Combining extractors to get you the data you need
