@@ -22,17 +22,18 @@ username=config.get("combi_apis","username")
 password=config.get("combi_apis","password")
 extractor_guid_1=config.get("combi_apis","extractor_guid_1")
 extractor_guid_2=config.get("combi_apis","extractor_guid_2")
+input_first_extractor=config.get("combi_apis","input_first_extractor")
 input_second_extractor=config.get("combi_apis","input_second_extractor")
 # If the config file has a starting url, the script will use that. If not, it will ask the user for a csv file to load a list of urls.
 try:
-    starting_url=config.get("combi_apis","starting_url")
+    starting_query=config.get("combi_apis","starting_query")
 except:
     file_with_urls = raw_input("Name of CSV file containing the input urls: ")
-    starting_url=[]
+    starting_query=[]
     with open(file_with_urls+".csv", "rb") as infile:
         reader=csv.reader(infile)
         for row in reader:
-            starting_url.append(row[0])
+            starting_query.append(row[0])
 
 # We define a latch class as python doesn't have a counting latch built in
 class _Latch(object):
@@ -69,7 +70,7 @@ client.connect()
 # Now we are going to query the first extractor
 print "Querying the first extractor:"
 # If the input for the first extractor is onyl one:
-if isinstance(starting_url,list)==False:
+if isinstance(starting_query,list)==False:
     # Use a latch to stop the program from exiting
     latch = _Latch(1)
 
@@ -79,7 +80,7 @@ if isinstance(starting_url,list)==False:
         extractor_guid_1
       ],
       "input": {
-        "webpage/url": starting_url
+        input_first_extractor: starting_query
       }
     }, callback)
 
@@ -89,14 +90,14 @@ if isinstance(starting_url,list)==False:
     # Here we create a list with all outputs from extractor 1 that we are going to use as inputs in extractor 2.
     inputs_second_extractor=[]
     first_query_results={}
-    for result in current_results[starting_url]:
+    for result in current_results[starting_query]:
         inputs_second_extractor.append(result[input_second_extractor])
         # We re-organize the first results into a dictionary using second extractor inputs as keys.
         first_query_results[result[input_second_extractor]]=result
 
 # If the input for the first extractor is a list of urls, we iterate the query, making 10 queries at once
 else:
-    len_last_batch=len(starting_url)%10
+    len_last_batch=len(starting_query)%10
    # Use a latch to stop the program from exiting
     latch = _Latch(10)
 
@@ -104,9 +105,9 @@ else:
     num_queries_in_batch=0
     inputs_second_extractor=[]
     first_query_results={}
-    for input_ in starting_url:
-        print "Query #%s of %s " % (starting_url.index(input_), len(starting_url))
-        queries_to_made=len(starting_url)-starting_url.index(input_)
+    for input_ in starting_query:
+        print "Query #%s of %s " % (starting_query.index(input_), len(starting_query))
+        queries_to_made=len(starting_query)-starting_query.index(input_)
         if queries_to_made==len_last_batch:
             latch = _Latch(len_last_batch)
         client.query({
@@ -114,7 +115,7 @@ else:
             extractor_guid_1
           ],
           "input": {
-            "webpage/url": input_
+            input_first_extractor: input_
           }
         }, callback)
         num_queries_in_batch=num_queries_in_batch+1 
