@@ -1,0 +1,8 @@
+[combi_apis]
+username=YOUR_USERNAME
+password=YOUR_PASSORD
+extractor_guid_1=API_GUID_1
+extractor_guid_2=API_GUID_2
+input_first_extractor=FIRST_QUERY_INPUT_NAME
+input_second_extractor=RESULT_FIRST_QUERY_FOR_INPUT_IN_API_2
+starting_url=STARTING_URL_OR_QUERY
