@@ -200,15 +200,18 @@ with open(output_name+".csv","a") as outfile:
             for result in query_results_to_write:
                 row=[]
                 for title in header:
-                    if isinstance(query_results_to_write[result][title],float)==True:
-                        row.append(str(query_results_to_write[result][title]).encode("ascii","ignore"))
-                    elif isinstance(query_results_to_write[result][title],list)==True:
-                        try:
-                            rows[i].append((" ".join((result[title]))).encode("ascii","ignore"))
-                        except:
-                            rows[i].append((" ".join(map(str,result[title]))).encode("ascii","ignore"))
-                    else:        
-                        row.append(query_results_to_write[result][title].encode("ascii","ignore"))
+                    try:
+                        if isinstance(query_results_to_write[result][title],float)==True:
+                            row.append(str(query_results_to_write[result][title]).encode("ascii","ignore"))
+                        elif isinstance(query_results_to_write[result][title],list)==True:
+                            try:
+                                rows[i].append((" ".join((result[title]))).encode("ascii","ignore"))
+                            except:
+                                rows[i].append((" ".join(map(str,result[title]))).encode("ascii","ignore"))
+                        else:        
+                            row.append(query_results_to_write[result][title].encode("ascii","ignore"))
+                    except:
+                        row.append("")
                 writer.writerow(row)
 
             # Cleaning the dictionaries for the next batch
