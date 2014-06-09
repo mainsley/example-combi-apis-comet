@@ -180,39 +180,45 @@ with open(output_name+".csv","a") as outfile:
                         if title not in header:
                             header.append(title)
                 writer.writerow(header)
+                
+            try:
 
-            # Adding results to the main results dictionary:
-            for result in current_results:
-                query_results_to_write[result]=first_query_results[result]
-                for title in current_results[result][0]:
-                    try:
-                        if isinstance(current_results[result][0][title],list)==True:
-                            try:
-                                query_results_to_write[result][title]=" ".join(current_results[result][0][title])
-                            except:
-                                query_results_to_write[result][title]=" ".join(map(str,current_results[result][0][title]))
-                        else:
-                            query_results_to_write[result][title]=current_results[result][0][title]
-                    except:
-                        pass
-
-            # At last, writing the results from this batch into the csv:
-            for result in query_results_to_write:
-                row=[]
-                for title in header:
-                    try:
-                        if isinstance(query_results_to_write[result][title],float)==True:
-                            row.append(str(query_results_to_write[result][title]).encode("ascii","ignore"))
-                        elif isinstance(query_results_to_write[result][title],list)==True:
-                            try:
-                                row.append((" ".join((result[title]))).encode("ascii","ignore"))
-                            except:
-                                row.append((" ".join(map(str,result[title]))).encode("ascii","ignore"))
-                        else:        
-                            row.append(query_results_to_write[result][title].encode("ascii","ignore"))
-                    except:
-                        row.append("")
-                writer.writerow(row)
+                # Adding results to the main results dictionary:
+                for result in current_results:
+                    query_results_to_write[result]=first_query_results[result]
+                    for title in current_results[result][0]:
+                        try:
+                            if isinstance(current_results[result][0][title],list)==True:
+                                try:
+                                    query_results_to_write[result][title]=" ".join(current_results[result][0][title])
+                                except:
+                                    query_results_to_write[result][title]=" ".join(map(str,current_results[result][0][title]))
+                            else:
+                                query_results_to_write[result][title]=current_results[result][0][title]
+                        except:
+                            pass
+    
+                # At last, writing the results from this batch into the csv:
+                for result in query_results_to_write:
+                    row=[]
+                    for title in header:
+                        try:
+                            if isinstance(query_results_to_write[result][title],float)==True:
+                                row.append(str(query_results_to_write[result][title]).encode("ascii","ignore"))
+                            elif isinstance(query_results_to_write[result][title],list)==True:
+                                try:
+                                    row.append((" ".join((result[title]))).encode("ascii","ignore"))
+                                except:
+                                    row.append((" ".join(map(str,result[title]))).encode("ascii","ignore"))
+                            else:        
+                                row.append(query_results_to_write[result][title].encode("ascii","ignore"))
+                        except:
+                            row.append("")
+                    writer.writerow(row)
+                    
+            except:
+                    
+                    pass
 
             # Cleaning the dictionaries for the next batch
             current_results={}
