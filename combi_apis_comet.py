@@ -11,15 +11,15 @@ import ConfigParser
 import csv
 import sys
 
-import importio
+import importio, latch
 
 output_name = sys.argv[1] if len(sys.argv) > 1 else raw_input("Name of the output CSV file you want to create: ")
 
 # First of all we need to read the config file:
 config = ConfigParser.ConfigParser()
 config.read("config_options.ini")
-username=config.get("combi_apis","username")
-password=config.get("combi_apis","password")
+user_id=config.get("combi_apis","user_id")
+api_key=config.get("combi_apis","api_key")
 extractor_guid_1=config.get("combi_apis","extractor_guid_1")
 extractor_guid_2=config.get("combi_apis","extractor_guid_2")
 input_first_extractor=config.get("combi_apis","input_first_extractor")
@@ -35,36 +35,38 @@ except:
         for row in reader:
             starting_query.append(row[0])
 
-# We define a latch class as python doesn't have a counting latch built in
-class _Latch(object):
-  def __init__(self, count=1):
-    self.count = count
-    self.lock = threading.Condition()
 
-  def countDown(self):
-    with self.lock:
-      self.count -= 1
 
-      if self.count <= 0:
-        self.lock.notifyAll()
-
-  def await(self):
-    with self.lock:
-      while self.count > 0:
-        self.lock.wait()
-
-logging.basicConfig(level=logging.INFO)
-
-current_results={}
 def callback(query, message):
   global current_results
-  if message["type"] == "MESSAGE": 
-    current_results[message["data"]["pageUrl"]]=message["data"]["results"]    
-  if query.finished(): latch.countDown()
+  
+  # Disconnect messages happen if we disconnect the client library while a query is in progress
+  if message["type"] == "DISCONNECT":
+    print "Query in progress when library disconnected"
+    print json.dumps(message["data"], indent = 4)
+
+  # Check the message we receive actually has some data in it
+  if message["type"] == "MESSAGE":
+    if "errorType" in message["data"]:
+      # In this case, we received a message, but it was an error from the external service
+      print "Got an error!" 
+      print json.dumps(message["data"], indent = 4)
+    else:
+      # We got a message and it was not an error, so we can process the data
+      #print "Got data!"
+      #print json.dumps(message["data"], indent = 4)
+      # Save the data we got in our current_results variable for later
+      current_results[message["data"]["pageUrl"]]=message["data"]["results"]
+  
+  # When the query is finished, countdown the latch so the program can continue when everything is done
+  if query.finished(): queryLatch.countdown()
 
 # Initialise the library
-client = importio_client.ImportIO()
-client.login(username, password)
+# To use an API key for authentication, use the following code:
+client = importio.importio(user_id=user_id, 
+  api_key=api_key, 
+  host="https://query.import.io")
+
 client.connect()
 
 # Now we are going to query the first extractor
@@ -72,7 +74,8 @@ print "Querying the first extractor:"
 # If the input for the first extractor is onyl one:
 if isinstance(starting_query,list)==False:
     # Use a latch to stop the program from exiting
-    latch = _Latch(1)
+    queryLatch = latch.latch(1)
+    current_results = {}
 
     # Querying extractor 1:
     client.query({
@@ -85,7 +88,7 @@ if isinstance(starting_query,list)==False:
     }, callback)
 
     # Wait until queries complete
-    latch.await()
+    queryLatch.await()
 
     # Here we create a list with all outputs from extractor 1 that we are going to use as inputs in extractor 2.
     inputs_second_extractor=[]
@@ -99,17 +102,18 @@ if isinstance(starting_query,list)==False:
 else:
     len_last_batch=len(starting_query)%10
    # Use a latch to stop the program from exiting
-    latch = _Latch(10)
+    queryLatch = latch.latch(10)
 
     # Querying extractor 1:
     num_queries_in_batch=0
     inputs_second_extractor=[]
     first_query_results={}
+    current_results={}
     for input_ in starting_query:
         print "Query #%s of %s " % (starting_query.index(input_), len(starting_query))
         queries_to_made=len(starting_query)-starting_query.index(input_)
         if queries_to_made==len_last_batch:
-            latch = _Latch(len_last_batch)
+            queryLatch = latch.latch(len_last_batch)
         client.query({
           "connectorGuids": [
             extractor_guid_1
@@ -122,7 +126,7 @@ else:
         print queries_to_made
         # Wait until queries complete
         if num_queries_in_batch==10 or queries_to_made==1:
-            latch.await()
+            queryLatch.await()
             num_queries_in_batch=0
             # Here we create a list with all outputs from extractor 1 that we are going to use as inputs in extractor 2.
             for url in current_results:
@@ -133,7 +137,7 @@ else:
 
 print first_query_results
 # Defining new Latch to do ten queries at once for the second extractor:
-latch = _Latch(10)
+queryLatch = latch.latch(10)
 
 # Now we query extractor 2, appending the new results in a new dictionary of results to write in the csv
 num_queries_in_batch=0
@@ -148,7 +152,7 @@ with open(output_name+".csv","a") as outfile:
         print "Query #%s of %s " % (inputs_second_extractor.index(input_to_query), len(inputs_second_extractor))
         queries_to_made=len(inputs_second_extractor)-inputs_second_extractor.index(input_to_query)
         if queries_to_made==len_last_batch:
-            latch = _Latch(len_last_batch)
+            queryLatch = latch.latch(len_last_batch)
         client.query({
           "connectorGuids": [
             extractor_guid_2
@@ -161,7 +165,7 @@ with open(output_name+".csv","a") as outfile:
 
         # We wait for the responses of the batch of queries
         if num_queries_in_batch==10 or queries_to_made==1:
-            latch.await()
+            queryLatch.await()
             num_queries_in_batch=0
 
             # If this is the first iteration we start by writing the headers
