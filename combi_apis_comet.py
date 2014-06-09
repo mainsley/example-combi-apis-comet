@@ -93,10 +93,11 @@ if isinstance(starting_query,list)==False:
     # Here we create a list with all outputs from extractor 1 that we are going to use as inputs in extractor 2.
     inputs_second_extractor=[]
     first_query_results={}
-    for result in current_results[starting_query]:
-        inputs_second_extractor.append(result[input_second_extractor])
-        # We re-organize the first results into a dictionary using second extractor inputs as keys.
-        first_query_results[result[input_second_extractor]]=result
+    for key in current_results:
+        for result in current_results[key]:
+            inputs_second_extractor.append(result[input_second_extractor])
+            # We re-organize the first results into a dictionary using second extractor inputs as keys.
+            first_query_results[result[input_second_extractor]]=result
 
 # If the input for the first extractor is a list of urls, we iterate the query, making 10 queries at once
 else:
