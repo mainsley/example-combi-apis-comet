@@ -185,13 +185,16 @@ with open(output_name+".csv","a") as outfile:
             for result in current_results:
                 query_results_to_write[result]=first_query_results[result]
                 for title in current_results[result][0]:
-                    if isinstance(current_results[result][0][title],list)==True:
-                        try:
-                            query_results_to_write[result][title]=" ".join(current_results[result][0][title])
-                        except:
-                            query_results_to_write[result][title]=" ".join(map(str,current_results[result][0][title]))
-                    else:
-                        query_results_to_write[result][title]=current_results[result][0][title]
+                    try:
+                        if isinstance(current_results[result][0][title],list)==True:
+                            try:
+                                query_results_to_write[result][title]=" ".join(current_results[result][0][title])
+                            except:
+                                query_results_to_write[result][title]=" ".join(map(str,current_results[result][0][title]))
+                        else:
+                            query_results_to_write[result][title]=current_results[result][0][title]
+                    except:
+                        pass
 
             # At last, writing the results from this batch into the csv:
             for result in query_results_to_write:
